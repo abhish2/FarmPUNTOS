@@ -1194,13 +1194,13 @@ def argumentParser():
                         required=False)
     parser.add_argument('--d',
                         metavar=('<API_TOKEN>'),
-                        nargs=1,
+                        nargs="*",
                         help='[Optional] Discord webhooks', 
                         type=str, 
                         required=False)
     parser.add_argument('--wfd',
                         metavar=('<WF_NAME>'),
-                        nargs=1,
+                        nargs="*",
                         help='[Optional] Workflow name and run number', 
                         type=str, 
                         required=False)
