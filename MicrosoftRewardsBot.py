@@ -10,7 +10,7 @@ from pathlib import Path
 from argparse import ArgumentParser
 from datetime import date, datetime, timedelta
 import traceback
-from discord_webhook import DiscordWebhook                                          
+from discord_webhook import DiscordWebhook                                                                                    
 
 import ipapi
 import requests
@@ -259,8 +259,6 @@ def login(browser: WebDriver, email: str, pwd: str, isMobile: bool = False):
                 send_email(CURRENT_ACCOUNT, "lock")
             updateLogs()
             cleanLogs()
-            if sys.stdout.isatty():
-                input('Press any key to close...')                                           
             os._exit(0)
         else:
             # Check if a second chance has already been given
@@ -1203,7 +1201,7 @@ def argumentParser():
                         nargs="*",
                         help='[Optional] Workflow name and run number', 
                         type=str, 
-                        required=False)
+                        required=False)       
     args = parser.parse_args()
     if args.everyday:
         if isinstance(validateTime(args.everyday), str):
@@ -1324,8 +1322,7 @@ def createMessge():
 
 def dwh(message):
     webhook = DiscordWebhook(url=ARGS.d[0], rate_limit_retry=True, content=message)
-    response = webhook.execute()                   
-
+    response = webhook.execute()
 def prRed(prt):
     print(f"\033[91m{prt}\033[00m")
 def prGreen(prt):
@@ -1547,13 +1544,13 @@ def redeem(browser, goal):
                 By.XPATH,
                 value="/html/body/div[1]/div[2]/main/div/ui-view/mee-rewards-dashboard/main/div/mee-rewards-redeem-info-card/div/mee-card-group/div/div[1]/mee-card/div/card-content/mee-rewards-redeem-goal-card/div/div[2]/div/a[1]/span/ng-transclude",
             ).click()
-            time.sleep(random.uniform(2, 4))
+            time.sleep(random.uniform(5, 7))
         except:
-            time.sleep(random.uniform(3, 5))
             browser.find_element(
                 By.XPATH,
                 value="/html/body/div[1]/div[2]/main/div/ui-view/mee-rewards-dashboard/main/div/mee-rewards-redeem-info-card/div/mee-card-group/div/div[1]/mee-card/div/card-content/mee-rewards-redeem-goal-card/div/div[2]/div/a[1]",
             ).click()
+            time.sleep(random.uniform(5, 7))
         try:
             url = browser.current_url
             url = url.split("/")
@@ -1562,16 +1559,25 @@ def redeem(browser, goal):
                 browser.find_element(
                     By.XPATH, value=f'//*[@id="redeem-pdp_{id}"]'
                 ).click()
-                time.sleep(random.uniform(3, 5))
+                time.sleep(random.uniform(5, 7))
             except:
                 browser.find_element(
                     By.XPATH, value=f'//*[@id="redeem-pdp_{id}"]/span[1]'
                 ).click()
+                
+            # If a cookie consent container is present, we need to accept
+            # those cookies to be able to redeem the reward
+            if browser.find_elements(By.ID, value="wcpConsentBannerCtrl"):
+                browser.find_element(
+                    By.XPATH, value="/html/body/div[3]/div/div[2]/button[1]"
+                ).click()
+                time.sleep(random.uniform(2, 4))
+            
             try:
                 browser.find_element(
                     By.XPATH, value='//*[@id="redeem-checkout-review-confirm"]'
                 ).click()
-                time.sleep(random.uniform(3, 5))
+                time.sleep(random.uniform(2, 4))
             except:
                 browser.find_element(
                     By.XPATH, value='//*[@id="redeem-checkout-review-confirm"]/span[1]'
@@ -1597,7 +1603,7 @@ def redeem(browser, goal):
         except:
             pass
         finally:
-            time.sleep(random.uniform(5, 10))
+            time.sleep(random.uniform(2, 4))
         try:
             error = browser.find_element(
                 By.XPATH, value='//*[@id="productCheckoutError"]/div/div[1]'
@@ -1668,7 +1674,7 @@ def farmer():
             if LOGS[CURRENT_ACCOUNT]["Last check"] != str(date.today()):
                 LOGS[CURRENT_ACCOUNT]["Last check"] = str(date.today())
                 updateLogs()
-            prYellow('********************' + account['username'][slice(0, 4)] + "**" + account['username'][slice(6, 7)] + '********************')
+            prYellow('********************' + account['username'][slice(0, 8)] + '********************')
             if not LOGS[CURRENT_ACCOUNT]['PC searches']:
                 browser = browserSetup(False, PC_USER_AGENT, random.choice(ARGS.proxies) if ARGS.proxies else None)
                 print('[LOGIN]', 'Logging-in...')
@@ -1748,7 +1754,7 @@ def farmer():
     else:
         if ARGS.d:
            message = createMessge()
-           dwh(message)
+           dwh(message)                     
         FINISHED_ACCOUNTS.clear()
 
 def main():
@@ -1800,8 +1806,6 @@ def main():
     print(f"The script took : {hour:02.0f}:{min:02.0f}:{sec:02.0f}")
     LOGS["Elapsed time"] = f"{hour:02.0f}:{min:02.0f}:{sec:02.0f}"
     updateLogs()
-    if sys.stdout.isatty():
-        input('Press any key to close the program...')
-
+          
 if __name__ == '__main__':
     main()
