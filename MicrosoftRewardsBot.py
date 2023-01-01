@@ -10,7 +10,7 @@ from pathlib import Path
 from argparse import ArgumentParser
 from datetime import date, datetime, timedelta
 import traceback
-from discord_webhook import DiscordWebhook                                                                                    
+from discord_webhook import DiscordWebhook
 
 import ipapi
 import requests
@@ -546,11 +546,11 @@ def resetTabs(browser: WebDriver):
         browser.get('https://rewards.microsoft.com/')
 
 def getAnswerCode(key: str, string: str) -> str:
-	t = 0
-	for i in range(len(string)):
-		t += ord(string[i])
-	t += int(key[-2:], 16)
-	return str(t)
+    t = 0
+    for i in range(len(string)):
+        t += ord(string[i])
+    t += int(key[-2:], 16)
+    return str(t)
 
 def bingSearches(browser: WebDriver, numberOfSearches: int, isMobile: bool = False):
     global POINTS_COUNTER
@@ -1201,7 +1201,7 @@ def argumentParser():
                         nargs="*",
                         help='[Optional] Workflow name and run number', 
                         type=str, 
-                        required=False)       
+                        required=False)
     args = parser.parse_args()
     if args.everyday:
         if isinstance(validateTime(args.everyday), str):
@@ -1754,7 +1754,7 @@ def farmer():
     else:
         if ARGS.d:
            message = createMessge()
-           dwh(message)                     
+           dwh(message)
         FINISHED_ACCOUNTS.clear()
 
 def main():
@@ -1806,6 +1806,6 @@ def main():
     print(f"The script took : {hour:02.0f}:{min:02.0f}:{sec:02.0f}")
     LOGS["Elapsed time"] = f"{hour:02.0f}:{min:02.0f}:{sec:02.0f}"
     updateLogs()
-          
+
 if __name__ == '__main__':
     main()
