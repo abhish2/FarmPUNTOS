@@ -11,4 +11,3 @@ pyyaml
 webdriver-manager
 packaging
 pyvirtualdisplay
-discord-webhook
