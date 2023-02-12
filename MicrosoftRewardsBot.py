@@ -258,7 +258,7 @@ def login(browser: WebDriver, email: str, pwd: str, isMobile: bool = False):
                 send_email(CURRENT_ACCOUNT, "lock")
             updateLogs()
             cleanLogs()
-            if ARGS.d:
+            if ARGS.discord:
                 message = createMessage()
                 sendReportToMessenger(message)
             os._exit(0)
@@ -1192,7 +1192,7 @@ def argumentParser():
                         help="[Optional] Enable auto-redeem rewards based on accounts.json goals.",
                         action="store_true",
                         required=False)
-    parser.add_argument('--d',
+    parser.add_argument('--discord',
                         metavar='<WEBHOOK_URL>',
                         nargs="*",
                         help='[Optional] This argument takes webhook url to send logs to Discord.',
@@ -1346,11 +1346,11 @@ def createMessage():
     return message
 
 def sendReportToMessenger(message):
-    if ARGS.d:
+    if ARGS.discord:
         sendToDiscord(message)
 
 def sendToDiscord(message):
-    webhook_url = ARGS.d[0]
+    webhook_url = ARGS.discord[0]
     if len(message) > 2000:
         messages = [message[i:i+2000] for i in range(0, len(message), 2000)]
         for ms in messages:
@@ -1794,7 +1794,7 @@ def farmer():
         checkInternetConnection()
         farmer()
     else:
-        if ARGS.d:
+        if ARGS.discord:
             message = createMessage()
             sendReportToMessenger(message)
         FINISHED_ACCOUNTS.clear()
