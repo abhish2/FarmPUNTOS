@@ -10,7 +10,6 @@ from pathlib import Path
 from argparse import ArgumentParser
 from datetime import date, datetime, timedelta
 import traceback
-from discord_webhook import DiscordWebhook
 
 import ipapi
 import requests
@@ -259,6 +258,9 @@ def login(browser: WebDriver, email: str, pwd: str, isMobile: bool = False):
                 send_email(CURRENT_ACCOUNT, "lock")
             updateLogs()
             cleanLogs()
+            if ARGS.d:
+                message = createMessage()
+                sendReportToMessenger(message)
             os._exit(0)
         else:
             # Check if a second chance has already been given
@@ -1191,10 +1193,10 @@ def argumentParser():
                         action="store_true",
                         required=False)
     parser.add_argument('--d',
-                        metavar=('<API_TOKEN>'),
+                        metavar='<WEBHOOK_URL>',
                         nargs="*",
-                        help='[Optional] Discord webhooks', 
-                        type=str, 
+                        help='[Optional] This argument takes webhook url to send logs to Discord.',
+                        type=str,
                         required=False)
     parser.add_argument('--wfd',
                         metavar=('<WF_NAME>'),
@@ -1294,35 +1296,74 @@ def checkInternetConnection():
             prRed("[ERROR] No internet connection.")
             time.sleep(1)
 
-def createMessge():
-     today = date.today().strftime("%d/%m/%Y")
-     message = f'📅 Daily report {today}   📃{ARGS.wfd}\n\n'
-     for index, value in enumerate(LOGS.items(), 1):
-         if value[1]['Last check'] == str(date.today()):
-             status = '✅ Farmed'
-             new_points = value[1]["Today's points"]
-             total_points = value[1]["Points"]
-             message += f"{index}. {value[0]}\n📝 Status: {status}\n⭐ Today's points: {new_points}\n🏅 Total points: {total_points}\n\n"        
-         elif value[1]['Last check'] == 'Your account has been suspended':
-             status = '❌ Suspended'
-             message += f"{index}. {value[0]}\n📝 Status: {status}\n"        
-         elif value[1]['Last check'] == 'Your account has been locked !':
-             status = '⚠️ Locked'
-             message += f"{index}. {value[0]}\n📝 Status: {status}\n"        
-         elif value[1]['Last check'] == 'Unusual activity detected !':
-             status = '⚠️ Unusual activity detected'
-             message += f"{index}. {value[0]}\n📝 Status: {status}\n"        
-         elif value[1]['Last check'] == 'Unknown error !':
-             status = '⛔️ Unknow error occured'
-             message += f"{index}. {value[0]}\n📝 Status: {status}\n"        
-         else:
-             status = '⛔️ Unknow error occured'
-             message += f"{index}. {value[0]}\n📝 Status: {status}\n"        
-     return message
+def createMessage():
+    today = date.today().strftime("%d/%m/%Y")
+    total_earned = 0
+    message = f'📅 Daily report {today}  📃{ARGS.wfd}\n\n'
+    for index, value in enumerate(LOGS.items(), 1):
+        redeem_message = None
+        if value[1].get("Redeem goal title", None):
+            redeem_title = value[1].get("Redeem goal title", None)
+            redeem_price = value[1].get("Redeem goal price")
+            redeem_count = value[1]["Points"] // redeem_price
+            if redeem_count > 1:
+                redeem_message = f"🎁 Ready to redeem: {redeem_title} for {redeem_price} points ({redeem_count}x)\n\n"
+            else:
+                redeem_message = f"🎁 Ready to redeem: {redeem_title} for {redeem_price} points\n\n"
+        if value[1]['Last check'] == str(date.today()):
+            status = '✅ Farmed'
+            new_points = value[1]["Today's points"]
+            total_earned += new_points
+            total_points = value[1]["Points"]
+            message += f"{index}. {value[0]}\n📝 Status: {status}\n⭐️ Earned points: {new_points}\n🏅 Total points: {total_points}\n"
+            if redeem_message:
+                message += redeem_message
+            else:
+                message += "\n"
+        elif value[1]['Last check'] == 'Your account has been suspended':
+            status = '❌ Suspended'
+            message += f"{index}. {value[0]}\n📝 Status: {status}\n\n"
+        elif value[1]['Last check'] == 'Your account has been locked !':
+            status = '⚠️ Locked'
+            message += f"{index}. {value[0]}\n📝 Status: {status}\n\n"
+        elif value[1]['Last check'] == 'Unusual activity detected !':
+            status = '⚠️ Unusual activity detected'
+            message += f"{index}. {value[0]}\n📝 Status: {status}\n\n"
+        elif value[1]['Last check'] == 'Unknown error !':
+            status = '⛔️ Unknow error occured'
+            message += f"{index}. {value[0]}\n📝 Status: {status}\n\n"
+        else:
+            status = f'Farmed on {value[1]["Last check"]}'
+            new_points = value[1]["Today's points"]
+            total_earned += new_points
+            total_points = value[1]["Points"]
+            message += f"{index}. {value[0]}\n📝 Status: {status}\n⭐️ Earned points: {new_points}\n🏅 Total points: {total_points}\n"
+            if redeem_message:
+                message += redeem_message
+            else:
+                message += "\n"
+    message += f"💵 Total earned points: {total_earned} (${total_earned/1300:0.02f}) (€{total_earned/1500:0.02f})"
+    return message
 
-def dwh(message):
-    webhook = DiscordWebhook(url=ARGS.d[0], rate_limit_retry=True, content=message)
-    response = webhook.execute()
+def sendReportToMessenger(message):
+    if ARGS.d:
+        sendToDiscord(message)
+
+def sendToDiscord(message):
+    webhook_url = ARGS.d[0]
+    if len(message) > 2000:
+        messages = [message[i:i+2000] for i in range(0, len(message), 2000)]
+        for ms in messages:
+            content = {"username": "⭐️ Microsoft Rewards Bot ⭐️", "content": ms}
+            response = requests.post(webhook_url, json=content)
+    else:
+        content = {"username": "⭐️ Microsoft Rewards Bot ⭐️", "content": message}
+        response = requests.post(webhook_url, json=content) 
+    if response.status_code == 204:
+        prGreen("[LOGS] Report sent to Discord.\n")
+    else:
+        prRed("[ERROR] Could not send report to Discord.\n")
+
 def prRed(prt):
     print(f"\033[91m{prt}\033[00m")
 def prGreen(prt):
@@ -1754,8 +1795,8 @@ def farmer():
         farmer()
     else:
         if ARGS.d:
-           message = createMessge()
-           dwh(message)
+            message = createMessage()
+            sendReportToMessenger(message)
         FINISHED_ACCOUNTS.clear()
 
 def main():
