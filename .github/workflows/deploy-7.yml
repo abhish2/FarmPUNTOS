@@ -25,7 +25,7 @@ jobs:
       - name: Install python dependencies
         run: pip install -r requirements.txt
       - name: Run Script
-        run: timeout 5400 python MicrosoftRewardsBot.py --accounts ${{ secrets.KEYS7 }} --headless --d ${{ secrets.webhook }} --privacy --wfd ${{ github.workflow }}
+        run: timeout 5400 python MicrosoftRewardsBot.py --accounts ${{ secrets.KEYS7 }} --headless --discord ${{ secrets.webhook }} --privacy --wfd ${{ github.workflow }}
       - name: Retry
         if: ${{ failure() }}
         run: timeout 1800 python MicrosoftRewardsBot.py --accounts ${{ secrets.KEYS7 }} --headless --fast --privacy
