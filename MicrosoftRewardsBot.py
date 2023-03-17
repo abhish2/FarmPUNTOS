@@ -1283,18 +1283,18 @@ def cleanLogs():
     del LOGS[CURRENT_ACCOUNT]["More promotions"]
     del LOGS[CURRENT_ACCOUNT]["PC searches"]
 
-def checkInternetConnection():
-    system = platform.system()
-    while True:
-        try:
-            if system == "Windows":
-                subprocess.check_output(["ping", "-n", "1", "8.8.8.8"], timeout=5)
-            elif system == "Linux":
-                subprocess.check_output(["ping", "-c", "1", "8.8.8.8"], timeout=5)
-            return
-        except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
-            prRed("[ERROR] No internet connection.")
-            time.sleep(1)
+# def checkInternetConnection():
+#     system = platform.system()
+#     while True:
+#         try:
+#             if system == "Windows":
+#                 subprocess.check_output(["ping", "-n", "1", "8.8.8.8"], timeout=5)
+#             elif system == "Linux":
+#                 subprocess.check_output(["ping", "-c", "1", "8.8.8.8"], timeout=5)
+#             return
+#         except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+#             prRed("[ERROR] No internet connection.")
+#             time.sleep(1)
 
 def createMessage():
     today = date.today().strftime("%d/%m/%Y")
@@ -1791,7 +1791,7 @@ def farmer():
         print(e, '\n') if ARGS.error else print('\n')
         ERROR = True
         browser.quit()
-        checkInternetConnection()
+        #checkInternetConnection()
         farmer()
     else:
         if ARGS.discord:
