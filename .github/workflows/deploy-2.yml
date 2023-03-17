@@ -25,7 +25,7 @@ jobs:
       - name: Install python dependencies
         run: pip install -r requirements.txt
       - name: Check internet connection
-        run: ping -c 3 -W 5 google.com
+        run: ping -c 3 -n -W 2 8.8.8.8
       - name: Run Script
         run: timeout 5400 python MicrosoftRewardsBot.py --accounts ${{ secrets.KEYS2 }} --headless --fast --discord ${{ secrets.webhook }} --privacy --wfd ${{ github.workflow }}
       - name: Retry
