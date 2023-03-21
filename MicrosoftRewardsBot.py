@@ -1302,7 +1302,7 @@ def createMessage():
     total_earned = 0
     wfd_txt = ""
     if ARGS.wfd:
-        wfd_txt = f"[{ARGS.wfd}]"
+        wfd_txt = f"{ARGS.wfd}"
 
     message = f'📅 Daily report {today}  📃{wfd_txt}\n\n'
     for index, value in enumerate(LOGS.items(), 1):
