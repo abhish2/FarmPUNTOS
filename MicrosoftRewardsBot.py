@@ -2,21 +2,23 @@ import json
 import os
 import platform
 import random
+import requests
+import smtplib
 import subprocess
 import sys
 import time
-import urllib.parse
+import traceback
+import zipfile
+import ipapi
 from pathlib import Path
 from argparse import ArgumentParser
 from datetime import date, datetime, timedelta
-import traceback
+from email.message import EmailMessage
 
-import ipapi
-import requests
 from func_timeout import FunctionTimedOut, func_set_timeout
 from random_word import RandomWords
+from pyvirtualdisplay import Display
 
-from webdriver_manager.chrome import ChromeDriverManager
 from selenium import webdriver
 from selenium.common.exceptions import (ElementNotInteractableException,
                                         NoAlertPresentException,
@@ -24,23 +26,21 @@ from selenium.common.exceptions import (ElementNotInteractableException,
                                         SessionNotCreatedException,
                                         TimeoutException,
                                         UnexpectedAlertPresentException)
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service as ChromeService
+from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.chrome.webdriver import WebDriver
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
 
-from pyvirtualdisplay import Display
-import zipfile
 
-from email.message import EmailMessage
-import ssl
-import smtplib
+import urllib.parse
 
 # Define user-agents
-PC_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36 Edg/107.0.1418.24'
-MOBILE_USER_AGENT = 'Mozilla/5.0 (Linux; Android 12; SM-N9750) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Mobile Safari/537.36 EdgA/107.0.1418.28'
+PC_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36 Edg/111.0.1661.44'
+MOBILE_USER_AGENT = 'Mozilla/5.0 (Linux; Android 12; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.5563.57 Mobile Safari/537.36 EdgA/110.0.1587.66'
 
 
 # Global variables
@@ -51,11 +51,12 @@ MOBILE = True # A flag for when the account has mobile bing search, it is useful
 CURRENT_ACCOUNT = None # save current account into this variable when farming.
 LOGS = {} # Dictionary of accounts to write in 'logs_accounts.txt'.
 FAST = False # When this variable set True then all possible delays reduced.
+BASE_URL = "https://rewards.bing.com"
 
 # Define browser setup function
 def browserSetup(isMobile: bool, user_agent: str = PC_USER_AGENT, proxy: str = None) -> WebDriver:
     # Create Chrome browser
-    options = Options()
+    options = ChromeOptions()
     if ARGS.session:
         if not isMobile:
             options.add_argument(f'--user-data-dir={Path(__file__).parent}/Profiles/{CURRENT_ACCOUNT}/PC')
@@ -151,7 +152,7 @@ def browserSetup(isMobile: bool, user_agent: str = PC_USER_AGENT, proxy: str = N
             zp.writestr("manifest.json", manifest_json)
             zp.writestr("background.js", background_js)
         options.add_extension(extension)
-        
+
     chrome_browser_obj = None
     try:
         chrome_browser_obj = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
@@ -306,7 +307,7 @@ def login(browser: WebDriver, email: str, pwd: str, isMobile: bool = False):
 
 def RewardsLogin(browser: WebDriver):
     #Login into Rewards
-    browser.get('https://rewards.microsoft.com/dashboard')
+    browser.get('https://rewards.bing.com/dashboard')
     try:
         time.sleep(10 if not FAST else 5)
         browser.find_element(By.ID, 'raf-signin-link-id').click()
@@ -543,9 +544,9 @@ def resetTabs(browser: WebDriver):
 
         browser.switch_to.window(curr)
         time.sleep(0.5)
-        browser.get('https://rewards.microsoft.com/')
+        browser.get('https://rewards.bing.com/')
     except:
-        browser.get('https://rewards.microsoft.com/')
+        browser.get('https://rewards.bing.com/')
 
 def getAnswerCode(key: str, string: str) -> str:
     t = 0
@@ -622,7 +623,7 @@ def bingSearch(browser: WebDriver, word: str, isMobile: bool):
 def completePromotionalItems(browser: WebDriver):
     try:
         item = getDashboardData(browser)["promotionalItem"]
-        if (item["pointProgressMax"] == 100 or item["pointProgressMax"] == 200) and item["complete"] == False and item["destinationUrl"] == "https://rewards.microsoft.com/":
+        if (item["pointProgressMax"] == 100 or item["pointProgressMax"] == 200) and item["complete"] == False and item["destinationUrl"] == "https://rewards.bing.com/":
             browser.find_element(By.XPATH, '//*[@id="promo-item"]/section/div/div/div/a').click()
             time.sleep(1)
             browser.switch_to.window(window_name = browser.window_handles[1])
@@ -936,7 +937,7 @@ def completePunchCards(browser: WebDriver):
                 url = punchCard['parentPromotion']['attributes']['destination']
                 if browser.current_url.startswith('https://rewards.'):
                     path = url.replace('https://rewards.microsoft.com', '')
-                    new_url = 'https://rewards.microsoft.com/dashboard/'
+                    new_url = 'https://rewards.bing.com/dashboard/'
                     userCode = path[11:15]
                     dest = new_url + userCode + path.split(userCode)[1]
                 else:
@@ -948,7 +949,7 @@ def completePunchCards(browser: WebDriver):
         except:
             resetTabs(browser)
     time.sleep(2)
-    browser.get('https://rewards.microsoft.com/dashboard/')
+    browser.get('https://rewards.bing.com/dashboard/')
     time.sleep(2)
     LOGS[CURRENT_ACCOUNT]['Punch cards'] = True
     updateLogs()
@@ -1299,7 +1300,11 @@ def cleanLogs():
 def createMessage():
     today = date.today().strftime("%d/%m/%Y")
     total_earned = 0
-    message = f'📅 Daily report {today}  📃{ARGS.wfd}\n\n'
+    wfd_txt = ""
+    if ARGS.wfd:
+        wfd_txt = f"[{ARGS.wfd}]"
+
+    message = f'📅 Daily report {today}  📃{wfd_txt}\n\n'
     for index, value in enumerate(LOGS.items(), 1):
         redeem_message = None
         if value[1].get("Redeem goal title", None):
@@ -1436,7 +1441,7 @@ def send_email(account, type):
         if email_info[0]["lock"] == "false":
             return
         email_subject = account + " has been locked from Microsoft Rewards!"
-        email_body = "Fix it by logging in through this link: https://rewards.microsoft.com/"
+        email_body = "Fix it by logging in through this link: https://rewards.bing.com/"
         
     elif type == "ban":
         if email_info[0]["ban"] == "false":
@@ -1448,7 +1453,7 @@ def send_email(account, type):
         if email_info[0]["phoneverification"] == "false":
                 return
         email_subject = account + " needs phone verification for redeeming rewards!"
-        email_body = "Fix it by manually redeeming a reward: https://rewards.microsoft.com/"
+        email_body = "Fix it by manually redeeming a reward: https://rewards.bing.com/"
     elif type == "proxyfail":
         if email_info[0]["proxyfail"] == "false":
                 return
@@ -1474,7 +1479,7 @@ def send_email(account, type):
 
 def redeem(browser, goal):
     goal = goal.lower()
-    browser.get("https://rewards.microsoft.com/")
+    browser.get("https://rewards.bing.com/")
     try:
         goal_name = browser.find_element(
             By.XPATH,
@@ -1546,7 +1551,7 @@ def redeem(browser, goal):
         prRed("[REDEEM] Ran into an exception trying to redeem!")
         return
     finally:
-        browser.get("https://rewards.microsoft.com/")
+        browser.get("https://rewards.bing.com/")
     try:
         goal_progress = browser.find_element(
             By.XPATH,
@@ -1624,7 +1629,7 @@ def redeem(browser, goal):
                     By.XPATH, value='//*[@id="redeem-checkout-review-confirm"]/span[1]'
                 ).click()
         except Exception as e:
-            browser.get("https://rewards.microsoft.com/")
+            browser.get("https://rewards.bing.com/")
             print(traceback.format_exc())
             prRed("[REDEEM] Ran into an exception trying to redeem!")
             return
@@ -1723,7 +1728,7 @@ def farmer():
                 prGreen('[LOGIN] Logged-in successfully !')
                 startingPoints = POINTS_COUNTER
                 prGreen('[POINTS] You have ' + str(POINTS_COUNTER) + ' points on your account !')
-                browser.get('https://rewards.microsoft.com/dashboard')
+                browser.get('https://rewards.bing.com/dashboard')
                 if not LOGS[CURRENT_ACCOUNT]['Daily']:
                     completeDailySet(browser)
                 if not LOGS[CURRENT_ACCOUNT]['Punch cards']:
@@ -1759,7 +1764,7 @@ def farmer():
                 prGreen('[LOGIN] Logged-in successfully !')
                 if LOGS[account['username']]['PC searches'] and ERROR:
                     startingPoints = POINTS_COUNTER
-                    browser.get('https://rewards.microsoft.com/dashboard')
+                    browser.get('https://rewards.bing.com/dashboard')
                     remainingSearches, remainingSearchesM = getRemainingSearches(browser)
                 if remainingSearchesM != 0:
                     print('[BING]', 'Starting Mobile Bing searches...')
@@ -1845,7 +1850,8 @@ def main():
     delta = end - start
     hour, remain = divmod(delta, 3600)
     min, sec = divmod(remain, 60)
-    print(f"The script took : {hour:02.0f}:{min:02.0f}:{sec:02.0f}")
+    print(f"Farmer finished in: {hour:02.0f}:{min:02.0f}:{sec:02.0f}")
+    print(f"Farmer finished on {datetime.now().strftime('%d-%m-%Y %H:%M:%S')}")
     LOGS["Elapsed time"] = f"{hour:02.0f}:{min:02.0f}:{sec:02.0f}"
     updateLogs()
 

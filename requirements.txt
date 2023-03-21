@@ -6,8 +6,8 @@ selenium
 urllib3
 ipapi
 func_timeout
-random-word==1.0.7
+random-word==1.0.11
 pyyaml
-webdriver-manager
 packaging
 pyvirtualdisplay
+webdriver-manager
