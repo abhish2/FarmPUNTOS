@@ -27,14 +27,12 @@ from selenium.common.exceptions import (ElementNotInteractableException,
                                         TimeoutException,
                                         UnexpectedAlertPresentException)
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service as ChromeService
-from selenium.webdriver.chrome.options import Options as ChromeOptions
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
-
 
 import urllib.parse
 
@@ -51,12 +49,12 @@ MOBILE = True # A flag for when the account has mobile bing search, it is useful
 CURRENT_ACCOUNT = None # save current account into this variable when farming.
 LOGS = {} # Dictionary of accounts to write in 'logs_accounts.txt'.
 FAST = False # When this variable set True then all possible delays reduced.
-BASE_URL = "https://rewards.bing.com"
+#BASE_URL = "https://rewards.bing.com"
 
 # Define browser setup function
 def browserSetup(isMobile: bool, user_agent: str = PC_USER_AGENT, proxy: str = None) -> WebDriver:
     # Create Chrome browser
-    options = ChromeOptions()
+    options = Options()
     if ARGS.session:
         if not isMobile:
             options.add_argument(f'--user-data-dir={Path(__file__).parent}/Profiles/{CURRENT_ACCOUNT}/PC')
